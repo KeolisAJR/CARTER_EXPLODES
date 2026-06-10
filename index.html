@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Carter Explodes</title>
+<style>
+  :root{
+    --red: #77d4ff;
+    --red-dark: #0729c2;
+    --yellow: #f5c4fa;
+    --bg: #323785;
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 1200px at 50% 30%, #cf80e2, var(--bg));
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    font-synthesis-weight: none;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  /* Big, red, happy-looking BEN */
+  #ben {
+    position: relative;
+    display: inline-block;
+    font-family: "Comic Sans MS", "Trebuchet MS", "Segoe UI", system-ui, -apple-system, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 900;
+    font-size: clamp(72px, 20vw, 220px);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--red);
+    text-shadow:
+      0 6px 0 var(--yellow),
+      0 10px 0 var(--red-dark),
+      0 22px 28px rgba(0,0,0,0.25);
+    cursor: pointer;
+    user-select: none;
+    transform-origin: 50% 60%;
+    animation: bob 2.4s ease-in-out infinite;
+    outline: none;
+  }
+
+  #ben:hover { filter: brightness(1.03); }
+  #ben:active { transform: scale(0.98); }
+
+  /* Keyboard focus */
+  #ben:focus-visible {
+    text-shadow:
+      0 6px 0 var(--yellow),
+      0 10px 0 var(--red-dark),
+      0 0 0 6px rgba(255, 213, 74, 0.45);
+  }
+
+  /* Each letter is independently animated on explode */
+  #ben span {
+    display: inline-block;
+    will-change: transform, opacity, filter;
+  }
+
+  /* Idle friendly bob */
+  @keyframes bob {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    50%     { transform: translateY(-6px) rotate(-1deg); }
+  }
+
+  /* Letter blast animation; custom properties filled by JS */
+  .explode span {
+    animation-name: letter-blast;
+    animation-duration: 900ms;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(.18,.68,.28,1.08);
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes letter-blast {
+    0% {
+      transform: translate(0,0) rotate(0deg) scale(1);
+      opacity: 1;
+      filter: blur(0);
+    }
+    70% {
+      transform:
+        translate(calc(var(--dx, 0) * 1px), calc(var(--dy, -40) * 1px))
+        rotate(var(--rot, 0deg))
+        scale(1.12);
+      opacity: 1;
+    }
+    100% {
+      transform:
+        translate(calc(var(--dx, 0) * 1px), calc((var(--dy, -40) + 120) * 1px))
+        rotate(calc(var(--rot, 0deg) + 20deg))
+        scale(0.95);
+      opacity: 0;
+      filter: blur(2px);
+    }
+  }
+
+  /* Confetti particles */
+  .particle {
+    position: absolute;
+    left: 0; top: 0;
+    will-change: transform, opacity;
+    pointer-events: none;
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.02) inset;
+  }
+
+  .particle.animate {
+    animation-name: confetti;
+    animation-duration: 1000ms;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(.1,.7,.2,1);
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes confetti {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) translate(0px, 0px) rotate(0deg) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform:
+        translate(-50%, -50%)
+        translate(var(--dx, 0px), calc(var(--dy, 0px) + 160px))
+        rotate(var(--rot, 0deg))
+        scale(0.9);
+    }
+  }
+
+  /* Subtle background confetti on click (burst ring) */
+  .ring {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 999px;
+    border: 4px solid rgba(255,45,45,0.4);
+    left: 0; top: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+    pointer-events: none;
+    animation: ring-pop 600ms ease-out forwards;
+  }
+  @keyframes ring-pop {
+    0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <!-- Accessible, focusable, clickable word -->
+    <div id="ben" role="button" aria-label="Ben" tabindex="0" title="Click me!">
+      <span>C</span><span>A</span><span>R</span><span>T</span><span>E</span><span>R</span>
+    </div>
+  </div>
+
+<script>
+  (function() {
+    const ben = document.getElementById('ben');
+    const stage = document.querySelector('.stage');
+    const letters = Array.from(ben.querySelectorAll('span'));
+
+    // Confetti palette
+    const COLORS = ['#ff5252', '#ffcd3c', '#4dd0e1', '#ab47bc', '#66bb6a', '#ffa726', '#ef5350', '#42a5f5'];
+
+    let animating = false;
+
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const rint = (min, max) => Math.floor(rand(min, max + 1));
+
+    function centerOf(el) {
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height * 0.6 };
+    }
+
+    function makeConfettiBurst(x, y, count = 100) {
+      const frags = [];
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        // Size and color
+        const w = rint(4, 10);
+        const h = rint(4, 12);
+        p.style.width = w + 'px';
+        p.style.height = h + 'px';
+        p.style.background = COLORS[rint(0, COLORS.length - 1)];
+        // Position (absolute to viewport center point)
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        // Trajectory
+        const angle = rand(-Math.PI, Math.PI);
+        const radius = rand(60, 280);
+        const dx = Math.cos(angle) * radius;
+        const dy = Math.sin(angle) * radius - rand(40, 120); // kick upward a bit
+        const rot = rint(-360, 360);
+        p.style.setProperty('--dx', dx.toFixed(1) + 'px');
+        p.style.setProperty('--dy', dy.toFixed(1) + 'px');
+        p.style.setProperty('--rot', rot + 'deg');
+        // Delay for richer look
+        p.style.setProperty('--delay', rint(0, 120) + 'ms');
+        // Shape variety
+        if (Math.random() < 0.25) p.style.borderRadius = '999px';
+
+        stage.appendChild(p);
+        // Force reflow then animate
+        void p.offsetWidth;
+        p.classList.add('animate');
+        frags.push(p);
+      }
+      // Add a ring pop
+      const ring = document.createElement('div');
+      ring.className = 'ring';
+      ring.style.left = x + 'px';
+      ring.style.top = y + 'px';
+      stage.appendChild(ring);
+
+      // Cleanup after animations
+      const ttl = 1400; // ms
+      setTimeout(() => {
+        frags.forEach(node => node.remove());
+        ring.remove();
+      }, ttl);
+    }
+
+    function explode() {
+      if (animating) return;
+      animating = true;
+
+      // Where to explode from: the center of the word
+      const c = centerOf(ben);
+
+      // Assign random vectors to each letter and trigger CSS animation
+      ben.classList.add('explode');
+      letters.forEach((span, i) => {
+        const dx = rint(-180, 180);
+        const dy = rint(-220, -80);
+        const rot = rint(-180, 180);
+        const delay = rint(0, 120);
+        span.style.setProperty('--dx', dx);
+        span.style.setProperty('--dy', dy);
+        span.style.setProperty('--rot', rot + 'deg');
+        span.style.setProperty('--delay', delay + 'ms');
+      });
+
+      // Confetti burst
+      makeConfettiBurst(c.x, c.y, 120);
+
+      // After animation, reset the letters so we can explode again
+      const total = 1200; // ms (animation + delays + buffer)
+      setTimeout(() => {
+        ben.classList.remove('explode');
+        letters.forEach(span => {
+          span.style.removeProperty('--dx');
+          span.style.removeProperty('--dy');
+          span.style.removeProperty('--rot');
+          span.style.removeProperty('--delay');
+        });
+        animating = false;
+      }, total);
+    }
+
+    // Interactions
+    ben.addEventListener('click', explode);
+    ben.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        explode();
+      }
+    });
+
+    // Prevent accidental text selection during rapid clicks
+    document.addEventListener('mousedown', () => document.body.classList.add('noselect'));
+    document.addEventListener('mouseup',   () => document.body.classList.remove('noselect'));
+  })();
+</script>
+</body>
+</html>
