@@ -1,293 +1,496 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Carter Explodes</title>
-<style>
-  :root{
-    --red: #77d4ff;
-    --red-dark: #0729c2;
-    --yellow: #f5c4fa;
-    --bg: #323785;
-  }
-
-  html, body {
-    height: 100%;
-  }
-
-  body {
-    margin: 0;
-    background: radial-gradient(1200px 1200px at 50% 30%, #cf80e2, var(--bg));
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    font-synthesis-weight: none;
-  }
-
-  .stage {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-  }
-
-  /* Big, red, happy-looking BEN */
-  #ben {
-    position: relative;
-    display: inline-block;
-    font-family: "Comic Sans MS", "Trebuchet MS", "Segoe UI", system-ui, -apple-system, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-    font-weight: 900;
-    font-size: clamp(72px, 20vw, 220px);
-    line-height: 1;
-    letter-spacing: 0.01em;
-    color: var(--red);
-    text-shadow:
-      0 6px 0 var(--yellow),
-      0 10px 0 var(--red-dark),
-      0 22px 28px rgba(0,0,0,0.25);
-    cursor: pointer;
-    user-select: none;
-    transform-origin: 50% 60%;
-    animation: bob 2.4s ease-in-out infinite;
-    outline: none;
-  }
-
-  #ben:hover { filter: brightness(1.03); }
-  #ben:active { transform: scale(0.98); }
-
-  /* Keyboard focus */
-  #ben:focus-visible {
-    text-shadow:
-      0 6px 0 var(--yellow),
-      0 10px 0 var(--red-dark),
-      0 0 0 6px rgba(255, 213, 74, 0.45);
-  }
-
-  /* Each letter is independently animated on explode */
-  #ben span {
-    display: inline-block;
-    will-change: transform, opacity, filter;
-  }
-
-  /* Idle friendly bob */
-  @keyframes bob {
-    0%,100% { transform: translateY(0) rotate(0deg); }
-    50%     { transform: translateY(-6px) rotate(-1deg); }
-  }
-
-  /* Letter blast animation; custom properties filled by JS */
-  .explode span {
-    animation-name: letter-blast;
-    animation-duration: 900ms;
-    animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(.18,.68,.28,1.08);
-    animation-delay: var(--delay, 0ms);
-  }
-
-  @keyframes letter-blast {
-    0% {
-      transform: translate(0,0) rotate(0deg) scale(1);
-      opacity: 1;
-      filter: blur(0);
+  <meta charset="UTF-8" />
+  <title>Word Exploder</title>
+  <style>
+    :root {
+      color-scheme: dark;
     }
-    70% {
-      transform:
-        translate(calc(var(--dx, 0) * 1px), calc(var(--dy, -40) * 1px))
-        rotate(var(--rot, 0deg))
-        scale(1.12);
-      opacity: 1;
+
+    * {
+      box-sizing: border-box;
     }
-    100% {
-      transform:
-        translate(calc(var(--dx, 0) * 1px), calc((var(--dy, -40) + 120) * 1px))
-        rotate(calc(var(--rot, 0deg) + 20deg))
-        scale(0.95);
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at top, #3a2370 0, #050308 55%, #000 100%);
+      color: #f8f5ff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .app-shell {
+      text-align: center;
+      padding: 3rem 1.75rem 2.75rem;
+      max-width: 760px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .title {
+      font-size: clamp(2.1rem, 4vw, 2.8rem);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin: 0 0 0.75rem;
+      color: #fff;
+      text-shadow:
+        0 0 20px rgba(255, 255, 255, 0.7),
+        0 0 40px rgba(255, 75, 129, 0.7);
+    }
+
+    .subtitle {
+      margin: 0 0 2.25rem;
+      font-size: 0.98rem;
+      color: rgba(235, 231, 255, 0.85);
+    }
+
+    .input-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    #word-input {
+      padding: 0.75rem 1.1rem;
+      font-size: 1.05rem;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      background: rgba(7, 5, 20, 0.9);
+      color: #ffffff;
+      min-width: min(280px, 70vw);
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background 0.15s ease-out;
+    }
+
+    #word-input::placeholder {
+      color: rgba(210, 206, 245, 0.6);
+    }
+
+    #word-input:focus {
+      border-color: #ff9f1c;
+      box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.35);
+      background: rgba(11, 8, 30, 0.95);
+    }
+
+    #submit-btn {
+      padding: 0.8rem 1.6rem;
+      font-size: 1.02rem;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #ff4b81, #ff9f1c);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition:
+        transform 0.12s ease-out,
+        box-shadow 0.12s ease-out,
+        filter 0.12s ease-out;
+    }
+
+    #submit-btn:hover {
+      transform: translateY(-1px) scale(1.03);
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.55);
+      filter: brightness(1.05);
+    }
+
+    #submit-btn:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6);
+      filter: brightness(0.96);
+    }
+
+    .word-wrapper {
+      margin-top: 2.2rem;
+    }
+
+    #exploding-word {
+      font-family: "Impact", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: clamp(3.5rem, 11vw, 6rem);
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow:
+        0 0 18px rgba(255, 255, 255, 0.9),
+        0 0 40px #ff4b81,
+        0 0 80px #36f1cd;
+      cursor: pointer;
+      user-select: none;
+      display: inline-block;
+      padding: 0.15em 0.35em;
+      border-radius: 0.4em;
+      position: relative;
+      isolation: isolate;
+      transition:
+        transform 0.16s ease-out,
+        text-shadow 0.16s ease-out,
+        filter 0.16s ease-out;
+    }
+
+    #exploding-word::before {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border-radius: inherit;
+      background: conic-gradient(from 180deg, #ff4b81, #ff9f1c, #36f1cd, #4bc0c8, #ff4b81);
+      opacity: 0.12;
+      filter: blur(16px);
+      z-index: -1;
+    }
+
+    #exploding-word:hover {
+      transform: scale(1.06);
+      text-shadow:
+        0 0 22px rgba(255, 255, 255, 1),
+        0 0 50px #ff9f1c,
+        0 0 95px #4bc0c8;
+      filter: saturate(1.2);
+    }
+
+    #exploding-word:active {
+      transform: scale(0.97);
+    }
+
+    /* Reload button in the top-right corner */
+    #reload-button {
+      position: fixed;
+      top: 16px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      background: rgba(9, 7, 24, 0.92);
+      color: #fdfcff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(12px);
       opacity: 0;
-      filter: blur(2px);
+      pointer-events: none;
+      z-index: 20;
+      transition:
+        opacity 0.2s ease-out,
+        transform 0.15s ease-out,
+        box-shadow 0.15s ease-out,
+        border-color 0.15s ease-out,
+        background 0.15s ease-out;
     }
-  }
 
-  /* Confetti particles */
-  .particle {
-    position: absolute;
-    left: 0; top: 0;
-    will-change: transform, opacity;
-    pointer-events: none;
-    border-radius: 2px;
-    transform: translate(-50%, -50%);
-    opacity: 0;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.02) inset;
-  }
-
-  .particle.animate {
-    animation-name: confetti;
-    animation-duration: 1000ms;
-    animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(.1,.7,.2,1);
-    animation-delay: var(--delay, 0ms);
-  }
-
-  @keyframes confetti {
-    0% {
+    #reload-button.visible {
       opacity: 1;
-      transform: translate(-50%, -50%) translate(0px, 0px) rotate(0deg) scale(1);
+      pointer-events: auto;
     }
-    100% {
-      opacity: 0;
-      transform:
-        translate(-50%, -50%)
-        translate(var(--dx, 0px), calc(var(--dy, 0px) + 160px))
-        rotate(var(--rot, 0deg))
-        scale(0.9);
-    }
-  }
 
-  /* Subtle background confetti on click (burst ring) */
-  .ring {
-    position: absolute;
-    width: 12px; height: 12px;
-    border-radius: 999px;
-    border: 4px solid rgba(255,45,45,0.4);
-    left: 0; top: 0;
-    transform: translate(-50%, -50%) scale(0.2);
-    opacity: 0;
-    pointer-events: none;
-    animation: ring-pop 600ms ease-out forwards;
-  }
-  @keyframes ring-pop {
-    0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0.6; }
-    100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
-  }
-</style>
+    #reload-button span {
+      font-size: 1.25rem;
+      transform-origin: center;
+      transition: transform 0.25s ease-out;
+    }
+
+    #reload-button:hover {
+      transform: translateY(-1px) scale(1.05);
+      border-color: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.65);
+      background: rgba(17, 12, 46, 0.98);
+    }
+
+    #reload-button:hover span {
+      transform: rotate(-150deg);
+    }
+
+    #reload-button:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 9px 18px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Full-screen layer for confetti only */
+    #effect-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 10;
+    }
+
+    /* Letters that fly apart during explosion */
+    .explosion-letter {
+      position: relative;
+      display: inline-block;
+      font-family: "Impact", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 10vw, 5.2rem);
+      color: #ffffff;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.9),
+        0 0 30px #ff4b81,
+        0 0 60px #36f1cd;
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 16px;
+      border-radius: 2px;
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .app-shell {
+        padding-inline: 1.2rem;
+      }
+
+      .subtitle {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="stage">
-    <!-- Accessible, focusable, clickable word -->
-    <div id="ben" role="button" aria-label="Ben" tabindex="0" title="Click me!">
-      <span>C</span><span>A</span><span>R</span><span>T</span><span>E</span><span>R</span>
-    </div>
-  </div>
+  <!-- Confetti layer -->
+  <div id="effect-layer"></div>
 
-<script>
-  (function() {
-    const ben = document.getElementById('ben');
-    const stage = document.querySelector('.stage');
-    const letters = Array.from(ben.querySelectorAll('span'));
+  <!-- Top-right reload button -->
+  <button id="reload-button" type="button" aria-label="Start over">
+    <span>&#10227;</span>
+  </button>
 
-    // Confetti palette
-    const COLORS = ['#ff5252', '#ffcd3c', '#4dd0e1', '#ab47bc', '#66bb6a', '#ffa726', '#ef5350', '#42a5f5'];
+  <main class="app-shell">
+    <!-- Screen 1: input -->
+    <section id="input-screen">
+      <h1 class="title">Make a word explode</h1>
+      <p class="subtitle">
+        Type any name or word, hit submit, then tap it to blow it to pieces.
+      </p>
+      <div class="input-row">
+        <input
+          id="word-input"
+          type="text"
+          autocomplete="off"
+          placeholder="Type your word here"
+        />
+        <button id="submit-btn" type="button">Submit</button>
+      </div>
+    </section>
 
-    let animating = false;
+    <!-- Screen 2: word display + explosions -->
+    <section id="explosion-screen" hidden>
+      <h1 class="title">Boom!</h1>
+      <p class="subtitle">
+        Click your word as many times as you like to keep exploding it.
+      </p>
+      <div class="word-wrapper">
+        <div id="exploding-word"></div>
+      </div>
+    </section>
+  </main>
 
-    const rand = (min, max) => Math.random() * (max - min) + min;
-    const rint = (min, max) => Math.floor(rand(min, max + 1));
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const inputScreen = document.getElementById("input-screen");
+      const explosionScreen = document.getElementById("explosion-screen");
+      const wordInput = document.getElementById("word-input");
+      const submitBtn = document.getElementById("submit-btn");
+      const explodingWord = document.getElementById("exploding-word");
+      const reloadButton = document.getElementById("reload-button");
+      const effectLayer = document.getElementById("effect-layer");
 
-    function centerOf(el) {
-      const r = el.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height * 0.6 };
-    }
+      let currentWord = "";
 
-    function makeConfettiBurst(x, y, count = 100) {
-      const frags = [];
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        // Size and color
-        const w = rint(4, 10);
-        const h = rint(4, 12);
-        p.style.width = w + 'px';
-        p.style.height = h + 'px';
-        p.style.background = COLORS[rint(0, COLORS.length - 1)];
-        // Position (absolute to viewport center point)
-        p.style.left = x + 'px';
-        p.style.top = y + 'px';
-        // Trajectory
-        const angle = rand(-Math.PI, Math.PI);
-        const radius = rand(60, 280);
-        const dx = Math.cos(angle) * radius;
-        const dy = Math.sin(angle) * radius - rand(40, 120); // kick upward a bit
-        const rot = rint(-360, 360);
-        p.style.setProperty('--dx', dx.toFixed(1) + 'px');
-        p.style.setProperty('--dy', dy.toFixed(1) + 'px');
-        p.style.setProperty('--rot', rot + 'deg');
-        // Delay for richer look
-        p.style.setProperty('--delay', rint(0, 120) + 'ms');
-        // Shape variety
-        if (Math.random() < 0.25) p.style.borderRadius = '999px';
+      function goToExplosionScreen(word) {
+        currentWord = word.trim();
+        if (!currentWord) return;
 
-        stage.appendChild(p);
-        // Force reflow then animate
-        void p.offsetWidth;
-        p.classList.add('animate');
-        frags.push(p);
+        // Punchier look
+        currentWord = currentWord.toUpperCase();
+
+        explodingWord.textContent = currentWord;
+        inputScreen.hidden = true;
+        explosionScreen.hidden = false;
+
+        reloadButton.classList.add("visible");
       }
-      // Add a ring pop
-      const ring = document.createElement('div');
-      ring.className = 'ring';
-      ring.style.left = x + 'px';
-      ring.style.top = y + 'px';
-      stage.appendChild(ring);
 
-      // Cleanup after animations
-      const ttl = 1400; // ms
-      setTimeout(() => {
-        frags.forEach(node => node.remove());
-        ring.remove();
-      }, ttl);
-    }
+      function resetToStart() {
+        currentWord = "";
+        wordInput.value = "";
+        inputScreen.hidden = false;
+        explosionScreen.hidden = true;
+        reloadButton.classList.remove("visible");
+        wordInput.focus();
+      }
 
-    function explode() {
-      if (animating) return;
-      animating = true;
-
-      // Where to explode from: the center of the word
-      const c = centerOf(ben);
-
-      // Assign random vectors to each letter and trigger CSS animation
-      ben.classList.add('explode');
-      letters.forEach((span, i) => {
-        const dx = rint(-180, 180);
-        const dy = rint(-220, -80);
-        const rot = rint(-180, 180);
-        const delay = rint(0, 120);
-        span.style.setProperty('--dx', dx);
-        span.style.setProperty('--dy', dy);
-        span.style.setProperty('--rot', rot + 'deg');
-        span.style.setProperty('--delay', delay + 'ms');
+      submitBtn.addEventListener("click", () => {
+        const value = wordInput.value.trim();
+        if (!value) return;
+        goToExplosionScreen(value);
       });
 
-      // Confetti burst
-      makeConfettiBurst(c.x, c.y, 120);
+      wordInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitBtn.click();
+        }
+      });
 
-      // After animation, reset the letters so we can explode again
-      const total = 1200; // ms (animation + delays + buffer)
-      setTimeout(() => {
-        ben.classList.remove('explode');
-        letters.forEach(span => {
-          span.style.removeProperty('--dx');
-          span.style.removeProperty('--dy');
-          span.style.removeProperty('--rot');
-          span.style.removeProperty('--delay');
-        });
-        animating = false;
-      }, total);
-    }
+      reloadButton.addEventListener("click", resetToStart);
 
-    // Interactions
-    ben.addEventListener('click', explode);
-    ben.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        explode();
-      }
+      explodingWord.addEventListener("click", () => {
+        if (!currentWord) return;
+        triggerExplosion(explodingWord, currentWord, effectLayer);
+      });
+
+      // Focus input on load
+      wordInput.focus();
     });
 
-    // Prevent accidental text selection during rapid clicks
-    document.addEventListener('mousedown', () => document.body.classList.add('noselect'));
-    document.addEventListener('mouseup',   () => document.body.classList.remove('noselect'));
-  })();
-</script>
+    function triggerExplosion(targetElement, word, effectLayer) {
+      const rect = targetElement.getBoundingClientRect();
+      const originX = rect.left + rect.width / 2;
+      const originY = rect.top + rect.height / 2;
+
+      explodeWordInPlace(targetElement, word);
+      createConfetti(originX, originY, effectLayer);
+    }
+
+    // Letters explode from their positions, tumble out, dissolve, then the word re-renders
+    function explodeWordInPlace(element, word) {
+      const text = word || element.textContent;
+      if (!text) return;
+
+      element.textContent = "";
+
+      const letters = text.split("");
+      let finished = 0;
+      const total = letters.length;
+
+      letters.forEach((char) => {
+        const span = document.createElement("span");
+        span.textContent = char;
+        span.className = "explosion-letter";
+        span.style.display = "inline-block";
+        span.style.position = "relative";
+
+        element.appendChild(span);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 60 + Math.random() * 140;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        const rotateDeg = Math.random() * 720 - 360;
+        const scale = 1.1 + Math.random() * 0.6;
+
+        const animation = span.animate(
+          [
+            {
+              transform: "translate(0, 0) rotate(0deg) scale(1)",
+              opacity: 1
+            },
+            {
+              transform:
+                "translate(" +
+                dx +
+                "px, " +
+                dy +
+                "px) rotate(" +
+                rotateDeg +
+                "deg) scale(" +
+                scale +
+                ")",
+              opacity: 0
+            }
+          ],
+          {
+            duration: 900 + Math.random() * 500,
+            easing: "cubic-bezier(.22,.61,.36,1)",
+            fill: "forwards"
+          }
+        );
+
+        animation.onfinish = () => {
+          span.remove();
+          finished++;
+          if (finished === total) {
+            // Re-render the full word so it can explode again
+            element.textContent = text;
+          }
+        };
+      });
+    }
+
+    function createConfetti(originX, originY, effectLayer) {
+      const colors = ["#ff4b81", "#ff9f1c", "#36f1cd", "#4bc0c8", "#ffd93d"];
+
+      const pieces = 80;
+      for (let i = 0; i < pieces; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "confetti";
+
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.backgroundColor = color;
+
+        confetti.style.left = originX + "px";
+        confetti.style.top = originY + "px";
+        confetti.style.transform = "translate(-50%, -50%)";
+
+        effectLayer.appendChild(confetti);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 110 + Math.random() * 260;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+
+        const rotate = Math.random() * 720 - 360;
+        const duration = 1100 + Math.random() * 900;
+
+        const animation = confetti.animate(
+          [
+            {
+              transform: "translate(-50%, -50%) rotate(0deg)",
+              opacity: 1
+            },
+            {
+              transform:
+                "translate(" +
+                (dx - 50) +
+                "px, " +
+                (dy - 50) +
+                "px) rotate(" +
+                rotate +
+                "deg)",
+              opacity: 0
+            }
+          ],
+          {
+            duration,
+            easing: "cubic-bezier(.12,.74,.24,1)",
+            fill: "forwards"
+          }
+        );
+
+        animation.onfinish = () => {
+          confetti.remove();
+        };
+      }
+    }
+  </script>
 </body>
 </html>
